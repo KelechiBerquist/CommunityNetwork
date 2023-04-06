@@ -3,12 +3,16 @@ App entry point
 """
 import argparse
 import pprint
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 
 from app.db_client import DatabaseClient
 from app.roster import Roster
 from app.interest import Interest
 from app.pairing import Pairings
 from app.meeting import Meetings
+from app.settings import APP_LOGGER, DB_NAME
 from app.wrangler import Wranglers as Wr
 
 # from app.pairing import Pairing
@@ -16,8 +20,6 @@ from app.wrangler import Wranglers as Wr
 
 # from src.loader import Loaders
 # from src.mailer import Mailer
-
-DB_NAME = "SkipLevels"
 
 
 if __name__ == '__main__':
@@ -30,14 +32,10 @@ if __name__ == '__main__':
     parser.add_argument('--roster_sheet', help="Name of sheet within roster file that"\
                                                " contains CSE roster information")
     parser.add_argument('--interest_file', help="Filename of interest in SkipLevel.")
-    parser.add_argument('--interest_sheet', help="Name of sheet within interest file that "\
-                                                 "contains interested parties ")
     parser.add_argument('--pairing_file', help="Filename of pairings in SkipLevel.")
-    parser.add_argument('--pairing_sheet', help="Name of sheet within interest file that "\
-                                                "contains pairing.")
     args = vars(parser.parse_args())
 
-    pprint.pprint(args)
+    # pprint.pprint(args)
     # print(args)
 
     db_conn = DatabaseClient(args["db_url"], DB_NAME)
@@ -48,6 +46,6 @@ if __name__ == '__main__':
         setattr(item, "stm_file", "skip_levels_stm.json")
 
     # # Insert into Roster and Interest collections
-    Roster.upsert_roster(args["iteration"], args["roster_file"], args["roster_sheet"])
-    Interest.upsert_interest(args["iteration"], args["interest_file"], args["interest_sheet"])
-    Meetings.upsert_meeting(args["iteration"], args["pairing_file"], args["pairing_sheet"])
+    # Roster.upsert_roster(args["iteration"], args["roster_file"], args["roster_sheet"])
+    # Interest.upsert_interest(args["iteration"], args["interest_file"], args["interest_sheet"])
+    Meetings.upsert_meeting(args["iteration"], args["pairing_file"], args["iteration"])

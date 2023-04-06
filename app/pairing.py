@@ -4,11 +4,13 @@ Purpose: Manages SkipLevels pairings
 """
 
 import os
+from copy import deepcopy
 
 import pandas as pd
 
 from app.settings import COLUMN_MAPPING, JOB_FAMILY_LEVELS
 from app.wrangler import Wranglers as Wr
+from app.queries import POTENTIAL_CONNECTIONS
 
 
 class Pairings:
@@ -16,10 +18,6 @@ class Pairings:
     """
     db = None
     root_dir = None
-    
-    @classmethod
-    def load_prohibitions(cls, args: dict):
-        pass
     
     @classmethod
     def get_pairings_from_file(cls, iteration: str, filename: str, sheet_name: str):
@@ -32,6 +30,7 @@ class Pairings:
 
         Returns:
         """
+        # print("In Pairing: Filename: {0}, Sheet: {1}".format(filename, sheet_name))
         file_path = os.path.join(cls.root_dir, "data", "input", iteration, filename)
         
         data = Wr.read_file(file_path, sheet_name)
@@ -53,5 +52,44 @@ class Pairings:
         return pair_list
 
     @classmethod
-    def get_pairings_from_database(cls, args: dict):
-        pass
+    def get_possible_pairings_from_database(cls, iteration: str, conn_obj):
+        lookup = deepcopy(POTENTIAL_CONNECTIONS)
+        lookup[1]["$match"]["iteration_name"] = \
+            lookup[1]["$match"]["iteration_name"].format(current_iteration=iteration)
+        connection_list = [
+            {
+                "emp": item["employee"][0],
+                "invalid_match": list(set(
+                        [_['emp_email'] for _ in item["counsellee"]] +
+                        [_['emp_email'] for _ in item["pml"]] +
+                        [_['senior'] for _ in item["junior_in_meeting"]] +
+                        [_['junior'] for _ in item["senior_in_meeting"]])),
+                "valid_match": [
+                    _ for _ in item["potential_connection"] if (
+                            _["emp_email"] not in [_['emp_email'] for _ in item["counsellee"]] and
+                            _["emp_email"] not in [_['emp_email'] for _ in item["pml"]] and
+                            _["emp_email"] not in [_['senior'] for _ in
+                                                   item["junior_in_meeting"]] and
+                            _["emp_email"] not in [_['junior'] for _ in item["senior_in_meeting"]]
+                    )
+                ]
+        
+            }
+            for item in conn_obj.aggregate(lookup)
+        ]
+
+        valid_matches = [
+            {
+                **item["emp"],
+                "valid_match": [
+                    _ for _ in item["valid_match"] if
+                    (item["emp"]["job_level"] < 2 and 3 <= _["job_level"] <= 4) or
+                    (item["emp"]["job_level"] == 3 and _["job_level"] != item["emp"][
+                        "job_level"]) or
+                    (item["emp"]["job_level"] > 3 and _["job_level"] <= 3)
+                ]
+        
+            }
+            for item in connection_list
+        ]
+        return valid_matches

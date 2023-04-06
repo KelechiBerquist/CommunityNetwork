@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from pandas import DataFrame
 
-from app.settings import BASE_ITERATION_NAME, BASE_ITERATION_NUMBER
+from app.settings import APP_LOGGER, BASE_ITERATION_NAME, BASE_ITERATION_NUMBER
 
 
 PairLevels = namedtuple("Pairs", ["junior", "senior"])
@@ -27,7 +27,8 @@ class Wranglers:
                 sheet_name: name of sheet within file to be read into dataframe.
             Returns: pandas DataFrame of data contained within file (and sheet if given)
         """
-
+        # print("In Wrangler: Filename: {0}, Sheet: {1}".format(file_path, sheet_name))
+        APP_LOGGER.debug("Reading file from path")
         if file_path.endswith(".xlsx"):
             return pd.read_excel(file_path, sheet_name=sheet_name)
         elif file_path.endswith(".csv"):
@@ -46,7 +47,7 @@ class Wranglers:
                 sheet_name: name of sheet within file to be read into dataframe.
             Returns: pandas DataFrame of data contained within file (and sheet if given)
         """
-
+        APP_LOGGER.debug("Writing file to path")
         if file_path.endswith(".xlsx"):
             data.to_excel(file_path, sheet_name=sheet_name, index=False)
         elif file_path.endswith(".csv"):
@@ -69,7 +70,8 @@ class Wranglers:
         date_columns = [date_cols] if isinstance(date_cols, str) else date_cols[:]
         frame = copy.deepcopy(data)
         for col in date_columns:
-            frame[col] = frame["HIRE DATE"].replace({np.nan: None, pd.NaT: None})
+            frame[col] = frame[col].replace({np.nan: None, pd.NaT: None})
+        APP_LOGGER.debug("Fixed date column")
         return frame
 
     @classmethod
@@ -92,7 +94,8 @@ class Wranglers:
             _: _.lower().replace(" ", "_")
             for _ in frame.columns
         }
-    
+
+        APP_LOGGER.debug("Fixed column names")
         return frame.rename(columns=update_cols_dict)
 
     @classmethod
@@ -104,9 +107,11 @@ class Wranglers:
 
         Returns: DataFrame with fixed columns
         """
+        
         first_iteration = "{0}-01".format(BASE_ITERATION_NAME)
         current_iteration = "{0}-01".format(iteration)
         quarters = pd.date_range(first_iteration, current_iteration, freq="Q")
+        APP_LOGGER.debug("Calculated iteration number")
         return BASE_ITERATION_NUMBER + len(quarters)
 
     @classmethod
@@ -121,13 +126,16 @@ class Wranglers:
         search_criterion = (data["emp_email"] == record[0]) | (data["emp_email"] == record[1])
         persons = data[search_criterion].to_dict(orient="record")
         
+        # print(record, persons, sep="\n\n", end="\n\n\n")
+        
         if persons[0]["job_level"] == persons[1]["job_level"]:
             msg = "Level between the pair in the meeting are equal. "\
                   "Level provided: {0}".format(persons[0]["job_level"])
-            raise ValueError(msg)
+            # raise ValueError(msg)
         junior = persons[0] if persons[0]["job_level"] < persons[1]["job_level"] else persons[1]
         senior = persons[0] if persons[0]["job_level"] > persons[1]["job_level"] else persons[1]
         
+        # APP_LOGGER.debug("Retrieved pair level")
         return PairLevels(junior["emp_email"], senior["emp_email"])
 
     @classmethod

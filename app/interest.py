@@ -8,7 +8,7 @@ import os
 import pandas as pd
 
 from app.db_client import DatabaseClient as Dc
-from app.settings import COLUMN_MAPPING, INTEREST_COLLECTION, INTEREST_COLUMN_NAME, \
+from app.settings import APP_LOGGER, COLUMN_MAPPING, INTEREST_COLLECTION, INTEREST_COLUMN_NAME, \
     JOB_FAMILY_LEVELS
 from app.wrangler import Wranglers as Wr
 
@@ -26,44 +26,56 @@ class Interest:
     
     @classmethod
     def upsert_interest(cls, iteration: str, filename: str, sheet_name: str) -> None:
-        """Load data for CSE roster
+        """Load data for CSE interest
 
         Parameters:
             iteration: current SkipLevels iteration. Expected format YYYY-MM
-            filename: path to file containing roster
+            filename: path to file containing interest
             sheet_name: name of sheet with interest information
         """
+        APP_LOGGER.info("Begin meeting upsert")
         # Prepare items for loading
         loaded_items = cls.prepare_interest(iteration, filename, sheet_name)
-        
+
         # Get DB connection
+        APP_LOGGER.debug("Create db connection for upserting values into interest collection")
         conn_obj = cls.db.get_collection_conn(INTEREST_COLLECTION)
-        
+
         # Insert data into DB
+        APP_LOGGER.debug("Upserting values into interest collection begins")
         Dc.upsert_items(conn_obj, loaded_items)
-    
+        APP_LOGGER.info("Upserting values into interest collection completed")
+
     @classmethod
     def prepare_interest(cls, iteration: str, filename: str, sheet_name: str) -> list:
-        """Prepare data to be loaded into the roster
+        """Prepare data to be loaded into the interest
         
         Parameters:
             iteration: current SkipLevels iteration. Expected format YYYY-MM
-            filename: path to file containing roster
+            filename: path to file containing interest
             sheet_name: name of sheet with interest information
             
         Returns:
         """
+        APP_LOGGER.info("Begin preparing data for interest upsert")
         file_path = os.path.join(cls.root_dir, "data", "input", iteration, filename)
-        
+
+        APP_LOGGER.debug("Begin reading file from path")
         data = Wr.read_file(file_path, sheet_name)
+
+        APP_LOGGER.debug("Begin fixing column names")
         data = Wr.fix_column_names(data, COLUMN_MAPPING)
+
+        APP_LOGGER.debug("Performing additional transformations")
         data["job_level"] = data["job_family"].apply(lambda _: JOB_FAMILY_LEVELS[_])
         data["iteration_name"] = iteration
         data["iteration_number"] = Wr.get_iteration_number(iteration)
         
         # Filter out interested parties
+        APP_LOGGER.debug("Filtering interested parties")
         data = data[(data["job_level"] >= 3) | pd.notnull(data[INTEREST_COLUMN_NAME])]
-        
+
+        APP_LOGGER.debug("Defining keys and update columns for meeting upsert")
         key_cols = ["iteration_name", "emp_email"]
         update_cols = ["iteration_number"]
         
