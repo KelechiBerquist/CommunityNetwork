@@ -58,6 +58,7 @@ class Meetings:
             sheet_name: name of sheet with interest information
 
         """
+        # TODO: Check for unmatched interested candidates and attempt to manually match them.
         APP_LOGGER.info("Begin preparing data for meeting upsert")
         # print("Filename: {0}, Sheet: {1}".format(filename, sheet_name))
         if filename is not None and filename != "" and not \

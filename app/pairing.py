@@ -51,45 +51,130 @@ class Pairings:
 
         return pair_list
 
+    @staticmethod
+    def get_pairings_from_database(cls, iteration: str, conn_obj):
+        data = cls.get_pairings_data_from_database(iteration, conn_obj)
+    
+        # TODO: Check for unmatched interested candidates and attempt to manually match them.
+        # to_match_data = Wr.get_assignment_data(data)
+
+        # to_match_data = [
+        #     {
+        #         "emp": i["emp"]["emp_email"],
+        #         "probables": {j["emp"]["emp_email"] for j in i["valid_match"]}
+        #     } for i in data].sort(key=lambda i: len(i["probables"]))
+        
+        to_match_data = [
+            {
+                "emp": i["emp"]["emp_email"],
+                "probables": [j["emp"]["emp_email"] for j in i["valid_match"]]
+            } for i in data].sort(key=lambda i: len(i["probables"]))
+        
+        
+        matches = cls.assign_pairings(to_match_data, [])
+        # enriched_matches = cls.enrich_connection_pair(data, matches, [])
+
     @classmethod
-    def get_possible_pairings_from_database(cls, iteration: str, conn_obj):
+    def get_pairings_data_from_database(cls, iteration: str, conn_obj):
         lookup = deepcopy(POTENTIAL_CONNECTIONS)
         lookup[1]["$match"]["iteration_name"] = \
             lookup[1]["$match"]["iteration_name"].format(current_iteration=iteration)
-        connection_list = [
-            {
-                "emp": item["employee"][0],
-                "invalid_match": list(set(
-                        [_['emp_email'] for _ in item["counsellee"]] +
-                        [_['emp_email'] for _ in item["pml"]] +
-                        [_['senior'] for _ in item["junior_in_meeting"]] +
-                        [_['junior'] for _ in item["senior_in_meeting"]])),
-                "valid_match": [
-                    _ for _ in item["potential_connection"] if (
-                            _["emp_email"] not in [_['emp_email'] for _ in item["counsellee"]] and
-                            _["emp_email"] not in [_['emp_email'] for _ in item["pml"]] and
-                            _["emp_email"] not in [_['senior'] for _ in
-                                                   item["junior_in_meeting"]] and
-                            _["emp_email"] not in [_['junior'] for _ in item["senior_in_meeting"]]
-                    )
-                ]
         
-            }
-            for item in conn_obj.aggregate(lookup)
-        ]
+        data = [_ for _ in conn_obj.aggregate(lookup)]
 
-        valid_matches = [
-            {
-                **item["emp"],
-                "valid_match": [
-                    _ for _ in item["valid_match"] if
-                    (item["emp"]["job_level"] < 2 and 3 <= _["job_level"] <= 4) or
-                    (item["emp"]["job_level"] == 3 and _["job_level"] != item["emp"][
-                        "job_level"]) or
-                    (item["emp"]["job_level"] > 3 and _["job_level"] <= 3)
-                ]
+        possibles = Wr.get_possible_connections(data)
+
+        probables = Wr.get_probable_connections(possibles)
+
+        return probables
+
+    @classmethod
+    def assign_pairings(cls, probables: list, matches: list):
+        """Assign pairings and populate a list of matches
+            
+            Parameters:
+                probables: list of employees and possible matches
+                matches: list of assigned matches
+        """
+        if not len(probables):
+            return matches
+        record = probables.pop(0)
+        party_a = record["emp"]
+        prob_bs = record["probables"]
         
-            }
-            for item in connection_list
-        ]
-        return valid_matches
+        if len(prob_bs):
+            party_b = prob_bs[0]
+            matches.append((party_a, party_b))
+            probables = cls.purge_matched(probables, party_a)
+            probables = cls.purge_matched(probables, party_b)
+        return cls.assign_pairings(probables, matches)
+
+    @staticmethod
+    def purge_matched(data: list, person) -> list:
+        a = [
+            {
+                "emp": i["emp"],
+                "probables": [j for j in i["probables"] if j != person]
+            } for i in data if i["emp"] != person]
+        # a = a.sort(key=lambda _: len(_["probables"]))
+        
+        return a
+
+    @staticmethod
+    def purge_person(data: list, person):
+        new_data = [_ for _ in data if _["emp"] != person]
+
+        new_data = [
+            {
+                "emp": i["emp"],
+                "probables": {j for j in i["probables"] if j != person}
+            } for i in data if i["emp"] != person].sort(key=lambda i: len(i["probables"]))
+        
+        
+        for _ in data:
+            if _["emp"] == person:
+                data.remove(_)
+            else:
+                try:
+                    _["probables"].remove(person)
+                except ValueError:
+                    pass
+                except Exception:
+                    raise
+        return data
+
+    @staticmethod
+    def purge_party_a(data: list, person_a: str):
+        for _ in data:
+            try:
+                _["probables"].remove(purge_value)
+            except ValueError:
+                pass
+            except Exception:
+                raise
+            try:
+                _["probables"].remove(purge_value)
+            except ValueError:
+                pass
+            except Exception:
+                raise
+        return data
+
+    @classmethod
+    def enrich_connection_pair(cls, data: list, matches: list, enriched: list):
+        if not len(matches):
+            return enriched
+
+        record = matches.pop(0)
+        party_a, party_b = record.items()
+        
+        to_enrich = {}
+        for i in data:
+            if i["emp"]["emp_email"] == party_a:
+                to_enrich["party_a"] = i["emp"]
+            if i["emp"]["emp_email"] == party_b:
+                to_enrich["party_b"] = i["emp"]
+            if "party_a" in to_enrich and "party_b" in to_enrich:
+                enriched.append(to_enrich)
+                break
+        return cls.enrich_connection_pair(data, matches, enriched)

@@ -2,6 +2,7 @@
 Purpose: Data wrangler
 
 """
+import os
 import unittest
 from collections import namedtuple
 
@@ -9,7 +10,11 @@ import pandas as pd
 import numpy as np
 from pandas import DataFrame
 
+from app.settings import ROOT_DIR
 from app.wrangler import Wranglers as Wr
+from unit_test.test_pair_data import EXPECTED_POSSIBLE, EXPECTED_PROBABLE, DB_DATA, ASSIGNMENT_DATA
+
+
 
 
 class TestWranglers(unittest.TestCase):
@@ -30,22 +35,28 @@ class TestWranglers(unittest.TestCase):
         """Test iteration retriever case
         """
         iteration_name = "2023-03"
-        self.assertEqual(Wr.get_iteration_number(iteration_name), 1)
+        self.assertEqual(Wr.get_iteration_number(iteration_name), 1,
+                         msg="Unexpected result from get_iteration_number")
 
         iteration_name = "2023-04"
-        self.assertEqual(Wr.get_iteration_number(iteration_name), 2)
+        self.assertEqual(Wr.get_iteration_number(iteration_name), 2,
+                         msg="Unexpected result from get_iteration_number")
 
         iteration_name = "2023-06"
-        self.assertEqual(Wr.get_iteration_number(iteration_name), 2)
+        self.assertEqual(Wr.get_iteration_number(iteration_name), 2,
+                         msg="Unexpected result from get_iteration_number")
 
         iteration_name = "2023-08"
-        self.assertEqual(Wr.get_iteration_number(iteration_name), 3)
+        self.assertEqual(Wr.get_iteration_number(iteration_name), 3,
+                         msg="Unexpected result from get_iteration_number")
 
         iteration_name = "2024-01"
-        self.assertEqual(Wr.get_iteration_number(iteration_name), 5)
+        self.assertEqual(Wr.get_iteration_number(iteration_name), 5,
+                         msg="Unexpected result from get_iteration_number")
 
         iteration_name = "2024-03"
-        self.assertEqual(Wr.get_iteration_number(iteration_name), 5)
+        self.assertEqual(Wr.get_iteration_number(iteration_name), 5,
+                         msg="Unexpected result from get_iteration_number")
 
     def test_get_pairing_level(self):
         """Test finding pairing level
@@ -62,22 +73,26 @@ class TestWranglers(unittest.TestCase):
         # Test case 1
         test_case = ["1a@email.com", "2a@email.com"]
         test_case_expectation = PairLevels("1a@email.com", "2a@email.com")
-        self.assertTupleEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation)
+        self.assertTupleEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation,
+                              msg="Unexpected result from get_pairing_level")
 
         # Test case 2
         test_case = ["2a@email.com", "4a@email.com"]
         test_case_expectation = PairLevels("2a@email.com", "4a@email.com")
-        self.assertTupleEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation)
+        self.assertTupleEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation,
+                              msg="Unexpected result from get_pairing_level")
 
         # Test case 3
         test_case = ["4c@email.com", "1a@email.com"]
         test_case_expectation = PairLevels("1a@email.com", "4c@email.com")
-        self.assertTupleEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation)
+        self.assertTupleEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation,
+                              msg="Unexpected result from get_pairing_level")
 
         # Test case 4
         test_case = ["6b@email.com", "3a@email.com"]
         test_case_expectation = PairLevels("3a@email.com", "6b@email.com")
-        self.assertTupleEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation)
+        self.assertTupleEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation,
+                              msg="Unexpected result from get_pairing_level")
 
         # Test case 5
         test_case = ["2a@email.com", "2b@email.com"]
@@ -88,6 +103,37 @@ class TestWranglers(unittest.TestCase):
         test_case = ["4a@email.com", "4c@email.com"]
         with self.assertRaises(ValueError):
             Wr.get_pairing_level(test_df, test_case)
+
+    def test_get_possible_connections(self):
+        """
+        """
+        for i in range(len(DB_DATA)):
+            result = Wr.get_possible_connections(DB_DATA[i:i+1])[0]
+            expected = EXPECTED_POSSIBLE[i]
+            msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
+            self.assertDictEqual(result, expected, msg=msg)
+
+    def test_get_probable_connections(self):
+        """
+        """
+        for i in range(len(EXPECTED_POSSIBLE)):
+            result = Wr.get_probable_connections(EXPECTED_POSSIBLE[i:i+1])[0]
+            expected = EXPECTED_PROBABLE[i]
+            msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
+            self.assertDictEqual(result, expected, msg=msg)
+
+    def test_get_assignment_data(self):
+        """
+        """
+        for i in range(len(EXPECTED_POSSIBLE)):
+            result = Wr.get_probable_connections(EXPECTED_POSSIBLE[i:i+1])[0]
+            expected = EXPECTED_PROBABLE[i]
+            msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
+            self.assertDictEqual(result, expected, msg=msg)
+
+
+
+
 
     def get_pairing_level(self):
         """Test finding pairing level

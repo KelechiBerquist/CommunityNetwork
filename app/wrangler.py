@@ -18,8 +18,8 @@ PairLevels = namedtuple("Pairs", ["junior", "senior"])
 
 class Wranglers:
 
-    @classmethod
-    def read_file(cls, file_path: str, sheet_name: str) -> DataFrame:
+    @staticmethod
+    def read_file(file_path: str, sheet_name: str) -> DataFrame:
         """Read provided file and return data frame
 
             Parameters:
@@ -37,8 +37,8 @@ class Wranglers:
             msg = "Provided file '{0}' has unknown file extension".format(file_path)
             raise ValueError(msg)
 
-    @classmethod
-    def write_file(cls, data, file_path: str, sheet_name: str) -> None:
+    @staticmethod
+    def write_file(data, file_path: str, sheet_name: str) -> None:
         """Read provided file and return data frame
 
             Parameters:
@@ -56,8 +56,8 @@ class Wranglers:
             msg = "Provided file '{0}' has unknown file extension".format(file_path)
             raise ValueError(msg)
 
-    @classmethod
-    def fix_date_columns(cls, data: DataFrame, date_cols: Union[str, list]):
+    @staticmethod
+    def fix_date_columns(data: DataFrame, date_cols: Union[str, list]):
         """Prepare data to be loaded into the roster
 
         Parameters:
@@ -74,8 +74,8 @@ class Wranglers:
         APP_LOGGER.debug("Fixed date column")
         return frame
 
-    @classmethod
-    def fix_column_names(cls, data: DataFrame, column_mapping: dict) -> DataFrame:
+    @staticmethod
+    def fix_column_names(data: DataFrame, column_mapping: dict) -> DataFrame:
         """Prepare data to be loaded into the roster
 
         Parameters:
@@ -98,8 +98,8 @@ class Wranglers:
         APP_LOGGER.debug("Fixed column names")
         return frame.rename(columns=update_cols_dict)
 
-    @classmethod
-    def get_iteration_number(cls, iteration) -> int:
+    @staticmethod
+    def get_iteration_number(iteration) -> int:
         """Prepare data to be loaded into the roster
 
         Parameters:
@@ -114,8 +114,8 @@ class Wranglers:
         APP_LOGGER.debug("Calculated iteration number")
         return BASE_ITERATION_NUMBER + len(quarters)
 
-    @classmethod
-    def get_pairing_level(cls, data: DataFrame, record: list) -> namedtuple:
+    @staticmethod
+    def get_pairing_level(data: DataFrame, record: list) -> namedtuple:
         """Determine the junior and senior within the pairs in the meeting
 
         Parameters:
@@ -138,8 +138,8 @@ class Wranglers:
         # APP_LOGGER.debug("Retrieved pair level")
         return PairLevels(junior["emp_email"], senior["emp_email"])
 
-    @classmethod
-    def get_pairings_with_levels(cls, data: DataFrame, record: list) -> dict:
+    @staticmethod
+    def get_pairings_with_levels(data: DataFrame, record: list) -> dict:
         """Determine the junior and senior within the pairs in the meeting
 
         Parameters:
@@ -159,68 +159,65 @@ class Wranglers:
         
         return {"junior": junior, "senior": senior}
 
-    #
-    # @classmethod
-    # def prepare_roster(cls, root_dir: str, roster_file: str, sheet_name: str):
-    #     """Prepare data to
-    #
-    #     :param root_dir:
-    #     :type root_dir:
-    #     :param roster_file:
-    #     :type roster_file:
-    #     :param sheet_name:
-    #     :type sheet_name:
-    #     :return:
-    #     :rtype:
-    #     """
-    #     job_family_file = os.path.join()
-    #     job_family_levels = json.load()
-    #     members = pd.read_excel(file_name, sheet_name=sheet_name)
-    #     members["_id"] = members["EMAIL ADDRESS"]
-    #     members["HIRE DATE"] = members["HIRE DATE"].replace({np.nan: None, pd.NaT: None})
-    #     members["REHIRE DATE"] = members["REHIRE DATE"].replace({np.nan: None, pd.NaT: None})
-    #     members["ADJ SERV DATE"] = members["ADJ SERV DATE"].replace({np.nan: None, pd.NaT: None})
-    #     members["LEVEL"] = members["JOB FAMILY"].apply(lambda _: JOB_FAMILY_LEVELS[_])
-    #
-    #     relevant_cols = [
-    #         "NAME", "PREF NAME", "EMAIL ADDRESS", "JOB FAMILY", "REGION", "BU REGION",
-    #         "PM BU SUBREGION DESCR", "Business Area Descr", "LOCATION DESCR",
-    #         "PML NAME", "PML EMAIL", "SPML Name", "EMPL CLASS DESCR", "_id", "LEVEL"
-    #
-    #     ]
-    #     update_cols_dict = {
-    #         _: _.lower().replace(" ", "_")
-    #         for _ in relevant_cols
-    #     }
-    #
-    #     roster_data = members[relevant_cols].rename(columns=update_cols_dict)
-    #     key_cols = ["_id"]
-    #     update_cols = [_ for _ in roster_data.columns if _.lower() != "_id"]
-    #
-    #     cse_members_keys = roster_data[key_cols].to_dict(orient="record")
-    #     cse_members_updates = roster_data[update_cols].to_dict(orient="record")
-    #
-    #     return [
-    #         {
-    #             "key": cse_members_keys[_],
-    #             "updates": cse_members_updates[_]
-    #         }
-    #         for _ in range(roster_data.shape[0])
-    #     ]
-    #
-    # @classmethod
-    # def prepare_interest(cls, file_name: str, sheet_name: str, iteration_quarter: str):
-    #     members = pd.read_excel(file_name, sheet_name=sheet_name)
-    #
-    #     interested = members[
-    #         (members["Indicated Interest"] == "Y") |
-    #         (members["JOB FAMILY"] == "3-Managers")
-    #     ]
-    #     interested_data = [
-    #         {
-    #             "key": {"iteration": iteration_quarter},
-    #             "updates": {"participants": [_ for _ in interested["EMAIL ADDRESS"].to_numpy()]}
-    #         }
-    #     ]
-    #
-    #     return interested_data
+    @staticmethod
+    def get_possible_connections(data: list) -> list:
+        """Parse data from database to get list of potential connections
+
+        Parameters:
+            data: list of employees with most recent connections, and
+                  embedded list of possible connections
+        Returns: list of employees with potential connections and invalid connections
+        """
+        return [
+            {
+                "emp": item["employee"][0],
+                "potential_connection": item["potential_connection"],
+                "invalid_match": set(
+                        [_['emp_email'] for _ in item["counselee"]] +
+                        [_['emp_email'] for _ in item["pml"]] +
+                        [_['senior'] for _ in item["junior_in_meeting"]] +
+                        [_['junior'] for _ in item["senior_in_meeting"]]),
+            } for item in data]
+
+    @staticmethod
+    def get_probable_connections(data: list) -> list:
+        """Parse data from database to get list of valid connections
+
+        Parameters:
+            data: list of employees with most recent connections, and lists
+                  of invalid and possible connections
+        Returns: list of employees with embedded list of only valid connections
+        """
+        # TODO: Check for unmatched interested candidates and attempt to manually match them.
+        return [
+            {
+                "emp": i["emp"],
+                "valid_match": [
+                    _ for _ in i["potential_connection"]
+                    if (_["emp_email"] not in i["invalid_match"]) and (
+                        (i["emp"]["job_level"] == 1 and _["job_level"] == 3) or
+                        (i["emp"]["job_level"] == 2 and 3 <= _["job_level"] <= 4) or
+                        (i["emp"]["job_level"] == 3 and _["job_level"] != i["emp"]["job_level"]) or
+                        (i["emp"]["job_level"] == 4 and 2 <= _["job_level"] <= 3) or
+                        (i["emp"]["job_level"] >= 5 and _["job_level"] == 3))
+                ]
+            } for i in data]
+
+    @staticmethod
+    def get_assignment_data(data: list) -> list:
+        """Parse data from database to get list of valid connections
+
+        Parameters:
+            data: list of employees with most recent connections, and lists
+                  of invalid and possible connections
+        Returns: list of employees with embedded list of only valid connections
+        """
+        # TODO: Sort data for matches so the parties with the fewest possible
+        #  options get matched first
+        a = [
+            {
+                "emp": i["emp"]["emp_email"],
+                "probables": [j["emp"]["emp_email"] for j in i["valid_match"]]
+            } for i in data]
+        a = a.sort(key=lambda i: len(i["probables"]))
+        return a
