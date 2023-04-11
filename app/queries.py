@@ -27,7 +27,7 @@ POTENTIAL_CONNECTIONS = [
             "localField": "employee.emp_email",
             "foreignField": "pml_email",
             "pipeline": [{"$project": {"_id": 0, "emp_email": 1}}, {"$sort": {"emp_email": 1}}],
-            "as": "counselee",
+            "as": "counsellee",
         },
     },
     {
@@ -57,19 +57,9 @@ POTENTIAL_CONNECTIONS = [
         }
     },
     {
-         "$lookup": {
-             "from": "roster",
-             "pipeline": [
-                 {"$project": {"_id": 0, "emp_email": 1, "job_level": 1}},
-                 {"$sort": {"emp_email": 1}},
-             ],
-             "as": "potential_connection",
-         }
-    },
-    {
         "$project": {
             "_id": 0, "employee": 1, "pml": 1, "junior_in_meeting": 1,
-            "senior_in_meeting": 1, "counselee": 1, "potential_connection": 1
+            "senior_in_meeting": 1, "counsellee": 1
         }
     }
 ]

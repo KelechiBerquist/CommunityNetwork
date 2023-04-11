@@ -171,9 +171,8 @@ class Wranglers:
         return [
             {
                 "emp": item["employee"][0],
-                "potential_connection": item["potential_connection"],
                 "invalid_match": set(
-                        [_['emp_email'] for _ in item["counselee"]] +
+                        [_['emp_email'] for _ in item["counsellee"]] +
                         [_['emp_email'] for _ in item["pml"]] +
                         [_['senior'] for _ in item["junior_in_meeting"]] +
                         [_['junior'] for _ in item["senior_in_meeting"]]),
@@ -195,10 +194,9 @@ class Wranglers:
                 "valid_match": [
                     _ for _ in i["potential_connection"]
                     if (_["emp_email"] not in i["invalid_match"]) and (
-                        (i["emp"]["job_level"] == 1 and _["job_level"] == 3) or
-                        (i["emp"]["job_level"] == 2 and 3 <= _["job_level"] <= 4) or
+                        (i["emp"]["job_level"] <= 2 and 3 <= _["job_level"] <= 4) or
                         (i["emp"]["job_level"] == 3 and _["job_level"] != i["emp"]["job_level"]) or
-                        (i["emp"]["job_level"] == 4 and 2 <= _["job_level"] <= 3) or
+                        (i["emp"]["job_level"] == 4 and _["job_level"] <= 3) or
                         (i["emp"]["job_level"] >= 5 and _["job_level"] == 3))
                 ]
             } for i in data]

@@ -34,8 +34,14 @@ BASE_ITERATION_NAME = "2023-03"
 BASE_ITERATION_NUMBER = 1
 CONNECTION_RESET = 6
 
-# DONT_MATCH_COLL_NAME = "dont_match"
-
+LEVEL_MATCH_MAP = {
+    1: [3, 4],
+    2: [3, 4],
+    3: [1, 2, 4, 5, 6],
+    4: [1, 2, 3],
+    5: [3],
+    6: [3],
+}
 
 JOB_FAMILY_LEVELS = {"6-Associates": 1, "4-Sr. Associates": 2, "3-Managers": 3,
                      "2-Directors/Sr. Managers": 4, "0-MDs": 5, "1-Partners/Principals": 6}
