@@ -48,13 +48,11 @@ If the pair file is not provided, pairs will be calculated based on existing dat
 
 
 ## Data organisation
-
-- Database: CommunityNetwork
 - Collections:
-  - Roster
-  - Relationships
-  - Meetings
-  - Interest
+  - [x] Roster
+  - [ ] Relationships
+  - [x] Meetings
+  - [x] Interest
 
 
 ### Collections
