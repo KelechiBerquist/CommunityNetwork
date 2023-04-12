@@ -27,7 +27,6 @@ class Wranglers:
                 sheet_name: name of sheet within file to be read into dataframe.
             Returns: pandas DataFrame of data contained within file (and sheet if given)
         """
-        # print("In Wrangler: Filename: {0}, Sheet: {1}".format(file_path, sheet_name))
         APP_LOGGER.debug("Reading file from path")
         if file_path.endswith(".xlsx"):
             return pd.read_excel(file_path, sheet_name=sheet_name)
@@ -99,11 +98,11 @@ class Wranglers:
         return frame.rename(columns=update_cols_dict)
 
     @staticmethod
-    def get_iteration_number(iteration) -> int:
+    def get_iteration_number(iteration: str) -> int:
         """Prepare data to be loaded into the roster
 
         Parameters:
-            iteration: current SkipLevels iteration
+            iteration: current CommunityNetwork iteration
 
         Returns: DataFrame with fixed columns
         """
@@ -126,30 +125,6 @@ class Wranglers:
         search_criterion = (data["emp_email"] == record[0]) | (data["emp_email"] == record[1])
         persons = data[search_criterion].to_dict(orient="record")
         
-        # print(record, persons, sep="\n\n", end="\n\n\n")
-        
-        if persons[0]["job_level"] == persons[1]["job_level"]:
-            msg = "Level between the pair in the meeting are equal. "\
-                  "Level provided: {0}".format(persons[0]["job_level"])
-            # raise ValueError(msg)
-        junior = persons[0] if persons[0]["job_level"] < persons[1]["job_level"] else persons[1]
-        senior = persons[0] if persons[0]["job_level"] > persons[1]["job_level"] else persons[1]
-        
-        # APP_LOGGER.debug("Retrieved pair level")
-        return PairLevels(junior["emp_email"], senior["emp_email"])
-
-    @staticmethod
-    def get_pairings_with_levels(data: DataFrame, record: list) -> dict:
-        """Determine the junior and senior within the pairs in the meeting
-
-        Parameters:
-            data: DataFrame with content to be searched
-            record: list with emails of the participants in the pair
-        Returns: DataFrame with fixed columns
-        """
-        search_criterion = (data["emp_email"] == record[0]) | (data["emp_email"] == record[1])
-        persons = data[search_criterion].to_dict(orient="record")
-        
         if persons[0]["job_level"] == persons[1]["job_level"]:
             msg = "Level between the pair in the meeting are equal. "\
                   "Level provided: {0}".format(persons[0]["job_level"])
@@ -157,10 +132,10 @@ class Wranglers:
         junior = persons[0] if persons[0]["job_level"] < persons[1]["job_level"] else persons[1]
         senior = persons[0] if persons[0]["job_level"] > persons[1]["job_level"] else persons[1]
         
-        return {"junior": junior, "senior": senior}
+        return PairLevels(junior["emp_email"], senior["emp_email"])
 
     @staticmethod
-    def get_possible_connections(data: list) -> list:
+    def get_connections_data(data: list) -> list:
         """Parse data from database to get list of potential connections
 
         Parameters:
@@ -179,43 +154,29 @@ class Wranglers:
             } for item in data]
 
     @staticmethod
-    def get_probable_connections(data: list) -> list:
-        """Parse data from database to get list of valid connections
+    def get_existing_connections(data: list) -> dict:
+        """Parse data from database to get list of existing connections
 
         Parameters:
-            data: list of employees with most recent connections, and lists
-                  of invalid and possible connections
-        Returns: list of employees with embedded list of only valid connections
+            data: list of employees with most recent connections, and
+                  embedded list of possible connections
+        Returns: dict of existing connections
         """
-        # TODO: Check for unmatched interested candidates and attempt to manually match them.
-        return [
-            {
-                "emp": i["emp"],
-                "valid_match": [
-                    _ for _ in i["potential_connection"]
-                    if (_["emp_email"] not in i["invalid_match"]) and (
-                        (i["emp"]["job_level"] <= 2 and 3 <= _["job_level"] <= 4) or
-                        (i["emp"]["job_level"] == 3 and _["job_level"] != i["emp"]["job_level"]) or
-                        (i["emp"]["job_level"] == 4 and _["job_level"] <= 3) or
-                        (i["emp"]["job_level"] >= 5 and _["job_level"] == 3))
-                ]
-            } for i in data]
+        return {item["emp"]['emp_email']: item["invalid_match"] for item in data}
 
     @staticmethod
-    def get_assignment_data(data: list) -> list:
-        """Parse data from database to get list of valid connections
+    def get_leveled_list(data: list) -> dict:
+        """Parse data from database to get list of possible connections by levels
 
         Parameters:
-            data: list of employees with most recent connections, and lists
-                  of invalid and possible connections
-        Returns: list of employees with embedded list of only valid connections
+            data: list of employees with most recent connections, and
+                  embedded list of possible connections
+        Returns: list of employees with possible connections by levels
         """
-        # TODO: Sort data for matches so the parties with the fewest possible
-        #  options get matched first
-        a = [
-            {
-                "emp": i["emp"]["emp_email"],
-                "probables": [j["emp"]["emp_email"] for j in i["valid_match"]]
-            } for i in data]
-        a = a.sort(key=lambda i: len(i["probables"]))
-        return a
+        levelled = {}
+        for item in data:
+            if item["emp"]['job_level'] not in levelled:
+                levelled[item["emp"]['job_level']] = {item["emp"]['emp_email']}
+            else:
+                levelled[item["emp"]['job_level']].add(item["emp"]['emp_email'])
+        return levelled

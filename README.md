@@ -1,35 +1,61 @@
-# Skip Levels
-This aims to define pairings for SkipLevels.
+# CommunityNetwork
+This aims to define pairings for CommunityNetwork.
+
 
 ## Directory Structure
 
 root
-- src
+- app
 - data
   - input
-    - iteration
+    - `<iteration>`
   - output
-    - iteration
+    - `<iteration>`
 - diagrams
+
+
+## Expected input files
+
+Compulsory files
+- Roster file: 
+  - file name: `./data/input/<iteration>/<iteration>_Roster.xlsx`
+  - sheet name: `Roster`
+- Interest file: 
+  - file name: `./data/input/<iteration>/<iteration>_Interest.xlsx`
+  - sheet name: `Interest`
+
+Optional file
+- Pair file:
+  - file name: `./data/input/<iteration>/<iteration>_Pair.xlsx`
+  - sheet name: `Pair`
+If the pair file is not provided, pairs will be calculated based on existing data in the database.
+
+
+## Expected output files
+- Enriched Match file: `./data/output/<iteration>/"enriched_matched_<iteration>.json"`
+- Matched file: `./data/output/<iteration>/"matched_<iteration>.json"`
+- Unmatched file: `./data/output/<iteration>/"unmatched_<iteration>.json"`
 
 
 ## Meeting Pairing rules
 
-- Last pairing was over a year ago
-- No pairings between PML and counsellee
-- Managers should have at most 2 meetings with juniors
-- Prioritise people that have not been paired before
-- Prioritise people that are in the same location
-    - Prioritise people that are in the same timezone
+- [x] Last pairing was over 8 iterations ago
+- [x] No pairings between PML and counsellee
+- [ ] Managers should have at most 2 meetings with juniors
+- [ ] Prioritise people that have not been paired before
+- [ ] Prioritise people that are in the same location
+- [ ] Prioritise people that are in the same timezone
 
 
 ## Data organisation
-- Database: SkipLevels
+
+- Database: CommunityNetwork
 - Collections:
   - Roster
   - Relationships
   - Meetings
   - Interest
+
 
 ### Collections
 
@@ -37,14 +63,12 @@ root
 ```json
     {
       "_id": "",
-      "name": "", 
-      "preferred_name": "", 
-      "email": "", 
-      "level": "", 
-      "location": "", 
-      "pml": "", 
-      "spml": "", 
-      "office_region": ""
+      "emp_name": "", 
+      "emp_pref_name": "", 
+      "emp_email": "", 
+      "job_level": "", 
+      "job_family": "", 
+      "pml": ""
     }
 ```
 

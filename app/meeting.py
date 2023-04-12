@@ -1,76 +1,82 @@
 """
-Purpose: Creates and updates SkipLevels Meetings
-
+Purpose: Creates and updates CommunityNetwork Meetings
 """
-import logging
-import os
 import copy
-import sys
 import json
+import os
 
-from datetime import datetime
-
-import pandas as pd
-import numpy as np
-
-from app.pairing import Pairings
 from app.db_client import DatabaseClient as Dc
-from app.settings import APP_LOGGER, MEETING_COLLECTION
-from app.wrangler import Wranglers as Wr
+from app.pairing import Pairings
+from app.queries import ENRICHED_MEETING_INFO
+from app.settings import APP_LOGGER, INTEREST_COLLECTION, MEETING_COLLECTION, OUTPUT_FILES, ROOT_DIR
+from app.utils import create_dirs
 
 
 class Meetings:
-    """Creates and updates SkipLevels Meetings
+    """Creates and updates CommunityNetwork Meetings
     """
     db = None
-    root_dir = None
     
     @classmethod
-    def upsert_meeting(cls, iteration: str=None, filename: str=None, sheet_name: str=None):
+    def upsert_meeting(cls, iteration: str = None, filename: str = None, sheet_name: str = None):
         """Load data for meeting
 
         Parameters:
-            iteration: current SkipLevels iteration. Expected format YYYY-MM
+            iteration: current CommunityNetwork iteration. Expected format YYYY-MM
             filename: path to file containing roster
             sheet_name: name of sheet with interest information
 
         """
         APP_LOGGER.info("Begin meeting upsert")
-        # Prepare items for loading
-        loaded_items = cls.prepare_meeting(iteration, filename, sheet_name)
-
         # Get DB connection
-        APP_LOGGER.debug("Create db connection for upserting values into meeting collection")
+        APP_LOGGER.debug("Create db connection for upserting values into meeting "
+                         "collection for iteration: %s" % iteration)
         conn_obj = cls.db.get_collection_conn(MEETING_COLLECTION)
+        interest_conn_obj = cls.db.get_collection_conn(INTEREST_COLLECTION)
+
+        # Prepare items for loading
+        APP_LOGGER.debug("Prepare meeting data")
+        loaded_items = cls.prepare_meeting(iteration, filename, sheet_name, interest_conn_obj)
 
         # Insert data into DB
-        APP_LOGGER.debug("Upserting values into meeting collection begins")
+        APP_LOGGER.debug("Upserting values into meeting collection begins "
+                         "for iteration: %s" % iteration)
         Dc.upsert_items(conn_obj, loaded_items)
-        APP_LOGGER.info("Upserting values into meeting collection completed")
+        APP_LOGGER.info("Upserting values into meeting collection completed "
+                        "for iteration: %s" % iteration)
+
+        APP_LOGGER.info("Recording enriched meeting information for iteration: %s" % iteration)
+        cls.retrieve_meeting_parties(iteration, conn_obj)
+        APP_LOGGER.info("Pairing completed for iteration: %s" % iteration)
 
     @classmethod
-    def prepare_meeting(cls, iteration: str=None, filename: str=None, sheet_name: str=None):
+    def prepare_meeting(cls, iteration: str = None, filename: str = None, sheet_name: str = None,
+                        interest_conn = None):
         """Prepare data for meeting
 
         Parameters:
-            iteration: current SkipLevels iteration. Expected format YYYY-MM
+            iteration: current CommunityNetwork iteration. Expected format YYYY-MM
             filename: path to file containing roster
             sheet_name: name of sheet with interest information
+            interest_conn: Interest connection object
 
         """
-        # TODO: Check for unmatched interested candidates and attempt to manually match them.
-        APP_LOGGER.info("Begin preparing data for meeting upsert")
-        # print("Filename: {0}, Sheet: {1}".format(filename, sheet_name))
-        if filename is not None and filename != "" and not \
-                (filename.endswith("xlsx") and sheet_name == ""):
-            APP_LOGGER.debug("Preparing data for meeting upsert from file")
+        APP_LOGGER.info("Begin preparing data for meeting upsert for iteration: %s" % iteration)
+        if os.path.exists(filename):
+            APP_LOGGER.debug("Preparing data for meeting upsert from file "
+                             "for iteration: %s" % iteration)
             paired = Pairings.get_pairings_from_file(iteration, filename, sheet_name)
+        elif interest_conn is not None:
+            APP_LOGGER.debug("Preparing data for meeting upsert from database "
+                             "for iteration: %s" % iteration)
+            paired = Pairings.get_pairings_from_database(iteration, interest_conn)
         else:
-            APP_LOGGER.debug("Preparing data for meeting upsert from database")
-            paired = []
+            APP_LOGGER.error("Meeting data can be retrieved from database or file "
+                             "for iteration: %s" % iteration)
+            raise NotImplementedError("Meeting data can be retrieved from database or file")
 
-        APP_LOGGER.debug("Defining keys and update columns for meeting upsert")
-        
+        APP_LOGGER.debug("Defining keys and update columns for meeting upsert "
+                         "for iteration: %s" % iteration)
         key_cols = ["iteration_name", "junior", "senior"]
         update_cols = ["iteration_number"]
 
@@ -81,3 +87,22 @@ class Meetings:
             }
             for _ in paired
         ]
+
+    @classmethod
+    def retrieve_meeting_parties(cls, iteration: str = None, meeting_conn = None):
+        """Retrieve enriched information for meeting
+
+        Parameters:
+            iteration: current CommunityNetwork iteration. Expected format YYYY-MM
+            meeting_conn: meeting connection object
+
+        """
+        enriched_file = OUTPUT_FILES["enriched_matched"].format(iteration=iteration)
+        create_dirs(enriched_file)
+        enriched = copy.deepcopy(ENRICHED_MEETING_INFO)
+
+        enriched[0]["$match"]['iteration_name'] = enriched[0]["$match"][
+            'iteration_name'].format(iteration=iteration)
+        
+        with open(enriched_file, "w") as writer:
+            json.dump([item for item in meeting_conn.aggregate(enriched)], writer)

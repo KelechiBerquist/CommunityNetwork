@@ -1,5 +1,4 @@
-from app.settings import ROSTER_COLLECTION, MEETING_COLLECTION, CONNECTION_RESET, INTEREST_COLLECTION, \
-    INTEREST_COLUMN_NAME, DB_NAME, BASE_ITERATION_NAME, BASE_ITERATION_NUMBER
+from app.settings import CONNECTION_RESET, MEETING_COLLECTION, ROSTER_COLLECTION
 
 POTENTIAL_CONNECTIONS = [
     {
@@ -62,4 +61,35 @@ POTENTIAL_CONNECTIONS = [
             "senior_in_meeting": 1, "counsellee": 1
         }
     }
+]
+
+ENRICHED_MEETING_INFO = [
+    {
+        "$match": {'iteration_name': '{iteration}'}
+    },
+    {
+        "$lookup": {
+            "from": ROSTER_COLLECTION,
+            "localField": "junior",
+            "foreignField": "emp_email",
+            "pipeline": [
+                {"$project": {"_id": 0, "emp_email": 1, "emp_name": 1, "emp_pref_name": 1,
+                              "job_family": 1, "job_level": 1}}
+            ],
+            "as": "junior",
+        }
+    },
+    {
+        "$lookup": {
+            "from": ROSTER_COLLECTION,
+            "localField": "senior",
+            "foreignField": "emp_email",
+            "pipeline": [
+                {"$project": {"_id": 0, "emp_email": 1, "emp_name": 1, "emp_pref_name": 1,
+                              "job_family": 1, "job_level": 1}}
+            ],
+            "as": "senior",
+        }
+    },
+    {"$project": {"_id": 0, "senior": 1, "junior": 1}}
 ]

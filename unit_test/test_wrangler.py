@@ -2,19 +2,14 @@
 Purpose: Data wrangler
 
 """
-import os
 import unittest
 from collections import namedtuple
 
 import pandas as pd
-import numpy as np
-from pandas import DataFrame
 
-from app.settings import ROOT_DIR
 from app.wrangler import Wranglers as Wr
-from unit_test.test_pair_data import EXPECTED_POSSIBLE, EXPECTED_PROBABLE, DB_DATA, ASSIGNMENT_DATA
-
-
+from unit_test.test_pair_data import DB_DATA, EXPECTED_EXISTING_CONNECTIONS, EXPECTED_LEVELLED, \
+    EXPECTED_POSSIBLE
 
 
 class TestWranglers(unittest.TestCase):
@@ -104,87 +99,27 @@ class TestWranglers(unittest.TestCase):
         with self.assertRaises(ValueError):
             Wr.get_pairing_level(test_df, test_case)
 
-    def test_get_possible_connections(self):
+    def test_get_connections_data(self):
         """
         """
         for i in range(len(DB_DATA)):
-            result = Wr.get_possible_connections(DB_DATA[i:i+1])[0]
+            result = Wr.get_connections_data(DB_DATA[i:i+1])[0]
             expected = EXPECTED_POSSIBLE[i]
             msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
             self.assertDictEqual(result, expected, msg=msg)
 
-    def test_get_probable_connections(self):
+    def test_get_existing_connections(self):
         """
         """
-        for i in range(len(EXPECTED_POSSIBLE)):
-            result = Wr.get_probable_connections(EXPECTED_POSSIBLE[i:i+1])[0]
-            expected = EXPECTED_PROBABLE[i]
-            msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
-            self.assertDictEqual(result, expected, msg=msg)
+        result = Wr.get_existing_connections(EXPECTED_POSSIBLE)
+        expected = EXPECTED_EXISTING_CONNECTIONS
+        msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
+        self.assertDictEqual(result, expected, msg=msg)
 
-    def test_get_assignment_data(self):
+    def test_get_leveled_list(self):
         """
         """
-        for i in range(len(EXPECTED_POSSIBLE)):
-            result = Wr.get_probable_connections(EXPECTED_POSSIBLE[i:i+1])[0]
-            expected = EXPECTED_PROBABLE[i]
-            msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
-            self.assertDictEqual(result, expected, msg=msg)
-
-
-
-
-
-    def get_pairing_level(self):
-        """Test finding pairing level
-        """
-        test_data = [["1a@email.com", 1], ["1b@email.com", 1], ["1c@email.com", 1],
-                     ["2a@email.com", 2], ["2b@email.com", 2], ["2c@email.com", 2],
-                     ["3a@email.com", 3], ["3b@email.com", 3], ["3c@email.com", 3],
-                     ["4a@email.com", 4], ["4b@email.com", 4], ["4c@email.com", 4],
-                     ["5a@email.com", 5], ["5b@email.com", 5], ["5c@email.com", 5],
-                     ["6a@email.com", 6], ["6b@email.com", 6], ["6c@email.com", 6]]
-        test_df = pd.DataFrame(test_data, columns=["emp_email", "job_level"])
-        PairLevels = namedtuple("Pairs", ["junior", "senior"])
-        
-        # Test case 1
-        test_case = ["1a@email.com", "2a@email.com"]
-        test_case_expectation = {
-            "junior": {"emp_email": "1a@email.com", "job_level": 1},
-            "senior": {"emp_email": "2a@email.com", "job_level": 2},
-        }
-        self.assertDictEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation)
-
-        # Test case 2
-        test_case = ["2a@email.com", "4a@email.com"]
-        test_case_expectation = {
-            "junior": {"emp_email": "2a@email.com", "job_level": 2},
-            "senior": {"emp_email": "4a@email.com", "job_level": 4},
-        }
-        self.assertDictEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation)
-
-        # Test case 3
-        test_case = ["4c@email.com", "1a@email.com"]
-        test_case_expectation = {
-            "junior": {"emp_email": "1a@email.com", "job_level": 1},
-            "senior": {"emp_email": "4c@email.com", "job_level": 4},
-        }
-        self.assertDictEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation)
-
-        # Test case 4
-        test_case = ["6b@email.com", "3a@email.com"]
-        test_case_expectation = {
-            "junior": {"emp_email": "3a@email.com", "job_level": 3},
-            "senior": {"emp_email": "6b@email.com", "job_level": 6},
-        }
-        self.assertDictEqual(Wr.get_pairing_level(test_df, test_case), test_case_expectation)
-
-        # Test case 5
-        test_case = ["2a@email.com", "2b@email.com"]
-        with self.assertRaises(ValueError):
-            Wr.get_pairing_level(test_df, test_case)
-
-        # Test case 6
-        test_case = ["4a@email.com", "4c@email.com"]
-        with self.assertRaises(ValueError):
-            Wr.get_pairing_level(test_df, test_case)
+        result = Wr.get_leveled_list(EXPECTED_POSSIBLE)
+        expected = EXPECTED_LEVELLED
+        msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
+        self.assertDictEqual(result, expected, msg=msg)

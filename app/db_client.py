@@ -1,9 +1,10 @@
+"""Purpose: Controls access to database client
+"""
 import pymongo
 
 
 class DatabaseClient:
-    """
-
+    """Controls access to database client
     """
     def __init__(self, conn_url: str, db_name: str):
         """Create or retrieve a collection from a db connection
