@@ -65,7 +65,6 @@ class Pairings:
 
         Returns: list of pairings
         """
-        # TODO: Check for unmatched interested candidates and attempt to manually match them.
         APP_LOGGER.info("Get pairing data for iteration: %s" % iteration)
         data = cls.get_pairings_data(iteration, conn_obj)
         
@@ -89,7 +88,6 @@ class Pairings:
 
         Returns: list of data used for pairings
         """
-        # TODO: Check for unmatched interested candidates and attempt to manually match them.
         APP_LOGGER.info("Get pairing information from database for iteration: %s" % iteration)
         lookup = deepcopy(POTENTIAL_CONNECTIONS)
         lookup[1]["$match"]["iteration_name"] = \
