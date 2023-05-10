@@ -65,13 +65,15 @@ INPUT_FILES = {
 
 # Level order represents pair preference
 LEVEL_MATCH_MAP = {
-    1: [3],
-    2: [4, 3, 5],
-    3: [1, 6, 2, 5, 4],
-    4: [2, 3],
+    1: [3, 4],
+    2: [4, 5, 3],
+    3: [1, 6, 5, 2, 4],
+    4: [2, 1, 3],
     5: [3, 2],
     6: [3],
 }
+MATCH_ORDER = [1, 2, 3, 4, 5, 6,]
+
 
 JOB_FAMILY_LEVELS = {"6-Associates": 1, "4-Sr. Associates": 2, "3-Managers": 3,
                      "2-Directors/Sr. Managers": 4, "0-MDs": 5, "1-Partners/Principals": 6}

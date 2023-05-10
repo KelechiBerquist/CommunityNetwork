@@ -10,7 +10,7 @@ import pandas as pd
 
 from app.queries import CONNECTIONS
 from app.settings import APP_LOGGER, COLUMN_MAPPING, JOB_FAMILY_LEVELS, \
-    LEVEL_MATCH_MAP, OUTPUT_FILES, ROOT_DIR
+    LEVEL_MATCH_MAP, MATCH_ORDER, OUTPUT_FILES, ROOT_DIR
 from app.utils import create_dirs
 from app.wrangler import Wranglers as Wr
 
@@ -46,6 +46,7 @@ class Pairings:
         
         # Filter out relevant parties
         data = data[pd.notnull(data["pair_email"])]
+        data["pair_number"] = list(range(1, data.shape[0] + 1))
 
         APP_LOGGER.debug("Mapping iteration participants to level for iteration: %s" % iteration)
         # To prevent duplication from searching both halves of the pair, put results in a set.
@@ -54,8 +55,11 @@ class Pairings:
 
         APP_LOGGER.info("Defined meeting collection information for iteration: %s" % iteration)
         # Define pair list.
-        return [{"iteration_name": iteration, "iteration_number": iteration_number,
-                 "junior": _.junior, "senior": _.senior} for _ in pair_levels]
+        return [
+            {
+                "iteration_name": iteration, "iteration_number": iteration_number,
+                "junior": v.junior, "senior": v.senior, "pair_number": 1+i
+            } for i, v in enumerate(pair_levels)]
 
     @classmethod
     def get_pairings_from_database(cls, iteration: str, conn_obj) -> list:
@@ -141,26 +145,29 @@ class Pairings:
         """
         matched = []
         # Loop through each level in the levelled dict. For this doc, this is level 0
-        for lev_0 in levels:
+        for lev_0 in MATCH_ORDER:
             # Find the list of levels that are appropriate to match with level 0
-            lev_1_list = LEVEL_MATCH_MAP[lev_0]
-            # Attempt to match all individuals in level 0 with someone in level 1.
-            # If a match is successful, pop individual from level 0 and level 1 list.
-            for lev_1 in lev_1_list:
+            for lev_1 in LEVEL_MATCH_MAP[lev_0]:
+                # Attempt to match all individuals in level 0 with someone in level 1.
+                # If a match is successful, pop individual from level 0 and level 1 list.
                 # Append successful level 0 and level 1 matches to matched list
                 matched.extend(cls.assign_pairs(levels[lev_0], levels[lev_1], connections, [],
                                                 iteration, iteration_number))
         
         # Enrich match pairs
-        enriched_pairs = [{**Wr.get_pair_level_enrichment(*_),
-                           "iteration_name": iteration, "iteration_number": iteration_number}
-                          for _ in matched]
+        enriched_pairs = [
+            {
+                **Wr.get_pair_level_enrichment(*v), "iteration_name": iteration,
+                "iteration_number": iteration_number, "pair_number": 1+i
+            } for i, v in enumerate(matched)]
         # Write records of matches and unmatches
         cls.record_unassigned(levels, iteration)
         cls.record_assigned(enriched_pairs, iteration)
-        return [{
-            **_, "junior": _["junior"]["emp_email"], "senior": _["senior"]["emp_email"]}
-            for _ in enriched_pairs]
+        return [
+            {
+                **v, "junior": v["junior"]["emp_email"], "senior": v["senior"]["emp_email"],
+                "pair_number": 1+i
+            } for i, v in enumerate(enriched_pairs)]
 
     @classmethod
     def record_unassigned(cls, unmatched: dict[str, list], iteration: str) -> None:

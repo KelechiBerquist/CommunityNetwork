@@ -79,8 +79,8 @@ class Meetings:
 
         APP_LOGGER.debug("Defining keys and update columns for meeting upsert "
                          "for iteration: %s" % iteration)
-        key_cols = ["iteration_name", "junior", "senior"]
-        update_cols = ["iteration_number"]
+        key_cols = ["iteration_name", "pair_number"]
+        update_cols = ["iteration_number", "junior", "senior"]
 
         return [
             {

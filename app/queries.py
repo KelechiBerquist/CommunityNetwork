@@ -9,7 +9,8 @@ CONNECTIONS = [
             "foreignField": "emp_email",
             "pipeline": [
                 {"$match": {"emp_status": 1}},
-                {"$project": {"_id": 0, "emp_email": 1, "job_level": 1, "pml_email": 1}},
+                {"$project": {"_id": 0, "emp_email": 1, "emp_name": 1, "emp_pref_name": 1,
+                              "job_level": 1, "pml_email": 1}},
             ],
             "as": "employee",
         }
@@ -76,7 +77,8 @@ PAIRED = [
             "from": ROSTER_COLLECTION,
             "localField": "junior",
             "foreignField": "emp_email",
-            "pipeline": [{"$project": {"_id": 0, "emp_email": 1, "job_level": 1, "pml_email": 1}}],
+            "pipeline": [{"$project": {"_id": 0, "emp_email": 1, "emp_name": 1, "emp_pref_name": 1,
+                                       "job_level": 1, "pml_email": 1}}],
             "as": "junior_in_meeting",
         }
     },
@@ -85,7 +87,8 @@ PAIRED = [
             "from": ROSTER_COLLECTION,
             "localField": "senior",
             "foreignField": "emp_email",
-            "pipeline": [{"$project": {"_id": 0, "emp_email": 1, "job_level": 1, "pml_email": 1}}],
+            "pipeline": [{"$project": {"_id": 0, "emp_email": 1, "emp_name": 1, "emp_pref_name": 1,
+                                       "job_level": 1, "pml_email": 1}}],
             "as": "senior_in_meeting",
         }
     },
@@ -113,7 +116,8 @@ UNPAIRED = [
             "foreignField": "emp_email",
             "pipeline": [
                 {"$match": {"empl_class_descr": "Active Employee"}},
-                {"$project": {"_id": 0, "emp_email": 1, "job_level": 1, "pml_email": 1}},
+                {"$project": {"_id": 0, "emp_email": 1, "emp_name": 1, "emp_pref_name": 1,
+                              "job_level": 1, "pml_email": 1}},
             ],
             "as": "employee",
         }
