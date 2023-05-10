@@ -2,15 +2,14 @@
 Purpose: Manages CommunityNetwork pairings
 
 """
-import copy
 import json
 import os
 from copy import deepcopy
 
 import pandas as pd
 
-from app.queries import POTENTIAL_CONNECTIONS
-from app.settings import APP_LOGGER, COLUMN_MAPPING, EXPLORATION_DEPTH, JOB_FAMILY_LEVELS, \
+from app.queries import CONNECTIONS
+from app.settings import APP_LOGGER, COLUMN_MAPPING, JOB_FAMILY_LEVELS, \
     LEVEL_MATCH_MAP, OUTPUT_FILES, ROOT_DIR
 from app.utils import create_dirs
 from app.wrangler import Wranglers as Wr
@@ -33,9 +32,12 @@ class Pairings:
         Returns:
         """
         APP_LOGGER.info("Get pairing information from file for iteration: %s" % iteration)
-        file_path = os.path.join(ROOT_DIR, "data", "input", iteration, filename)
+        APP_LOGGER.debug("Passed arguments are filename: %s \t sheet_name: %s \t iteration: %s" %
+                         (filename, sheet_name, iteration))
 
-        data = Wr.read_file(file_path, sheet_name)
+        APP_LOGGER.debug("Begin reading file from path '%s' for iteration: %s" %
+                         (filename, iteration))
+        data = Wr.read_file(filename, sheet_name)
         data = Wr.fix_column_names(data, COLUMN_MAPPING)
         
         APP_LOGGER.debug("Perform transformation on data for iteration: %s" % iteration)
@@ -69,7 +71,7 @@ class Pairings:
         data = cls.get_pairings_data(iteration, conn_obj)
         
         iteration_number = Wr.get_iteration_number(iteration)
-        level_list = Wr.get_leveled_list(data)
+        level_list = Wr.get_leveled_preconnectors(data)
         connect_list = Wr.get_existing_connections(data)
 
         APP_LOGGER.debug("Generate a list of possible matches for iteration: %s" % iteration)
@@ -89,44 +91,43 @@ class Pairings:
         Returns: list of data used for pairings
         """
         APP_LOGGER.info("Get pairing information from database for iteration: %s" % iteration)
-        lookup = deepcopy(POTENTIAL_CONNECTIONS)
-        lookup[1]["$match"]["iteration_name"] = \
-            lookup[1]["$match"]["iteration_name"].format(current_iteration=iteration)
+        lookup = deepcopy(CONNECTIONS)
+        lookup[0]["$match"]["iteration_name"] = \
+            lookup[0]["$match"]["iteration_name"].format(current_iteration=iteration)
 
         APP_LOGGER.debug("Set up data for pairing for iteration: %s" % iteration)
         
-        return Wr.get_connections_data([_ for _ in conn_obj.aggregate(lookup)])
+        return Wr.get_preconnections_data([_ for _ in conn_obj.aggregate(lookup)])
 
     @classmethod
-    def assign_pairs(cls, juniors: set[str], seniors: set[str], connected: dict[str, set],
-                     matches: list[dict], iteration: str, iteration_number: int):
+    def assign_pairs(cls, l0s: list[dict], l1s: list[dict], connected: dict[str, set],
+                     matches: list[tuple], iteration: str,
+                     iteration_number: int) -> list[tuple]:
         """Assign pairings and populate a list of matches
 
             Parameters:
-                juniors: set of potential juniors in connection
-                seniors: set of potential seniors in connection
+                l0s: set of potential party 1 in connection
+                l1s: set of potential party 2 in connection
                 connected: dict of parties and their existing connections
                 matches: list of assigned matches
                 iteration: current networking iteration
                 iteration_number: numerical representation of iteration
         """
-        if (not len(juniors)) or (not len(seniors)):
+        
+        if (not len(l0s)) or (not len(l1s)):
             return matches
         
-        jun = juniors.pop()
-        sen = seniors.pop()
-
-        if sen not in connected[jun]:
-            matches.append({"junior": jun, "senior": sen,
-                            "iteration_name": iteration,
-                            "iteration_number": iteration_number})
-        else:
-            juniors.add(jun)
-            seniors.add(sen)
-        return cls.assign_pairs(juniors, seniors, connected, matches, iteration, iteration_number)
+        for l1 in l1s:
+            if l1["emp_email"] not in connected[l0s[0]["emp_email"]]:
+                matches.append((l0s[0], l1))
+                l0s.remove(l0s[0])
+                l1s.remove(l1)
+                break
+        
+        return cls.assign_pairs(l0s, l1s, connected, matches, iteration, iteration_number)
 
     @classmethod
-    def assign_pairs_per_level(cls, levels: dict[str, set], connections: dict[str, set],
+    def assign_pairs_per_level(cls, levels: dict[str, list], connections: dict[str, set],
                                iteration: str, iteration_number: int) -> list:
         """Assign pairings and populate a list of matches
 
@@ -139,17 +140,30 @@ class Pairings:
             Returns: list of connections
         """
         matched = []
-        for j_lev in levels:
-            s_lev_list = LEVEL_MATCH_MAP[j_lev]
-            for s_lev in s_lev_list:
-                matched.extend(cls.assign_pairs(levels[j_lev], levels[s_lev], connections, [],
+        # Loop through each level in the levelled dict. For this doc, this is level 0
+        for lev_0 in levels:
+            # Find the list of levels that are appropriate to match with level 0
+            lev_1_list = LEVEL_MATCH_MAP[lev_0]
+            # Attempt to match all individuals in level 0 with someone in level 1.
+            # If a match is successful, pop individual from level 0 and level 1 list.
+            for lev_1 in lev_1_list:
+                # Append successful level 0 and level 1 matches to matched list
+                matched.extend(cls.assign_pairs(levels[lev_0], levels[lev_1], connections, [],
                                                 iteration, iteration_number))
+        
+        # Enrich match pairs
+        enriched_pairs = [{**Wr.get_pair_level_enrichment(*_),
+                           "iteration_name": iteration, "iteration_number": iteration_number}
+                          for _ in matched]
+        # Write records of matches and unmatches
         cls.record_unassigned(levels, iteration)
-        cls.record_assigned(matched, iteration)
-        return matched
+        cls.record_assigned(enriched_pairs, iteration)
+        return [{
+            **_, "junior": _["junior"]["emp_email"], "senior": _["senior"]["emp_email"]}
+            for _ in enriched_pairs]
 
     @classmethod
-    def record_unassigned(cls, unmatched: dict[str, set], iteration: str) -> None:
+    def record_unassigned(cls, unmatched: dict[str, list], iteration: str) -> None:
         """Assign pairings and populate a list of matches
 
             Parameters:
@@ -158,13 +172,13 @@ class Pairings:
             
         """
         unmatched_list = {k: list(v) for k, v in unmatched.items()}
-        unmatch_file = OUTPUT_FILES["unmatched"].format(iteration=iteration)
+        unmatch_file = OUTPUT_FILES["algo_unmatched"].format(iteration=iteration)
         create_dirs(unmatch_file)
         with open(unmatch_file, "w") as writer:
             json.dump(unmatched_list, writer)
 
     @classmethod
-    def record_assigned(cls, match: list[dict[str, set]], iteration: str) -> None:
+    def record_assigned(cls, match: list[dict[str, str]], iteration: str) -> None:
         """Assign pairings and populate a list of matches
 
             Parameters:
@@ -172,7 +186,7 @@ class Pairings:
                 iteration: current networking iteration
             
         """
-        match_file = OUTPUT_FILES["matched"].format(iteration=iteration)
+        match_file = OUTPUT_FILES["algo_matched"].format(iteration=iteration)
         create_dirs(match_file)
         with open(match_file, "w") as writer:
             json.dump(match, writer)

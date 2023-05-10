@@ -103,7 +103,7 @@ class TestWranglers(unittest.TestCase):
         """
         """
         for i in range(len(DB_DATA)):
-            result = Wr.get_connections_data(DB_DATA[i:i+1])[0]
+            result = Wr.get_preconnections_data(DB_DATA[i:i + 1])[0]
             expected = EXPECTED_POSSIBLE[i]
             msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
             self.assertDictEqual(result, expected, msg=msg)
@@ -119,7 +119,7 @@ class TestWranglers(unittest.TestCase):
     def test_get_leveled_list(self):
         """
         """
-        result = Wr.get_leveled_list(EXPECTED_POSSIBLE)
+        result = Wr.get_leveled_preconnectors(EXPECTED_POSSIBLE)
         expected = EXPECTED_LEVELLED
         msg = "\n\nExp: {0}\n\nGot: {1}".format(expected, result)
         self.assertDictEqual(result, expected, msg=msg)

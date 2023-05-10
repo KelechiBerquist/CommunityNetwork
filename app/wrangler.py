@@ -69,7 +69,8 @@ class Wranglers:
         date_columns = [date_cols] if isinstance(date_cols, str) else date_cols[:]
         frame = copy.deepcopy(data)
         for col in date_columns:
-            frame[col] = frame[col].replace({np.nan: None, pd.NaT: None})
+            if col in frame.columns:
+                frame[col] = frame[col].replace({np.nan: None, pd.NaT: None})
         APP_LOGGER.debug("Fixed date column")
         return frame
 
@@ -123,7 +124,7 @@ class Wranglers:
         Returns: tuple of junior and senior emails
         """
         search_criterion = (data["emp_email"] == record[0]) | (data["emp_email"] == record[1])
-        persons = data[search_criterion].to_dict(orient="record")
+        persons = data[search_criterion].to_dict(orient="records")
         
         if persons[0]["job_level"] == persons[1]["job_level"]:
             msg = "Level between the pair in the meeting are equal. "\
@@ -135,7 +136,25 @@ class Wranglers:
         return PairLevels(junior["emp_email"], senior["emp_email"])
 
     @staticmethod
-    def get_connections_data(data: list) -> list:
+    def get_pair_level_enrichment(party_1: dict, party_2: dict) -> dict:
+        """Determine the junior and senior within the pairs in the meeting
+
+        Parameters:
+            party_1: dict of first party in the pair
+            party_2: dict of second party in the pair
+        Returns: tuple of junior and senior emails
+        """
+        if party_1["job_level"] == party_2["job_level"]:
+            msg = "Level between the pair in the meeting are equal. "\
+                  "Level provided: {0}".format(party_1["job_level"])
+            raise ValueError(msg)
+        junior = party_1 if party_1["job_level"] < party_2["job_level"] else party_2
+        senior = party_1 if party_1["job_level"] > party_2["job_level"] else party_2
+        
+        return {"junior": junior, "senior": senior}
+
+    @staticmethod
+    def get_preconnections_data(data: list) -> list:
         """Parse data from database to get list of potential connections
 
         Parameters:
@@ -165,7 +184,7 @@ class Wranglers:
         return {item["emp"]['emp_email']: item["invalid_match"] for item in data}
 
     @staticmethod
-    def get_leveled_list(data: list) -> dict:
+    def get_leveled_preconnectors(data: list) -> dict:
         """Parse data from database to get list of possible connections by levels
 
         Parameters:
@@ -173,10 +192,11 @@ class Wranglers:
                   embedded list of possible connections
         Returns: list of employees with possible connections by levels
         """
+        
         levelled = {}
         for item in data:
             if item["emp"]['job_level'] not in levelled:
-                levelled[item["emp"]['job_level']] = {item["emp"]['emp_email']}
+                levelled[item["emp"]['job_level']] = [item["emp"]]
             else:
-                levelled[item["emp"]['job_level']].add(item["emp"]['emp_email'])
+                levelled[item["emp"]['job_level']].append(item["emp"])
         return levelled

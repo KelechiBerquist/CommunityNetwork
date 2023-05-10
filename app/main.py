@@ -28,17 +28,26 @@ if __name__ == '__main__':
     for item in [Interest, Roster, Meetings]:
         setattr(item, "db", db_conn)
 
+    APP_LOGGER.info("Invalidating status of roster collection")
+    Roster.inactivate_roster(iteration=args["iteration"])
+
     APP_LOGGER.info("Inserting roster into collection")
-    Roster.upsert_roster(args["iteration"],
-                         INPUT_FILES["roster"]["file"].format(iteration=args["iteration"]),
-                         INPUT_FILES["roster"]["sheet"])
-    
+    Roster.upsert_roster(iteration=args["iteration"],
+                         filename=INPUT_FILES["roster"]["file"].format(iteration=args["iteration"]),
+                         sheet_name=INPUT_FILES["roster"]["sheet"])
+
     APP_LOGGER.info("Inserting interest into collection")
     Interest.upsert_interest(args["iteration"],
                              INPUT_FILES["interest"]["file"].format(iteration=args["iteration"]),
                              INPUT_FILES["interest"]["sheet"])
-    
+
     APP_LOGGER.info("Update meetings info in collection")
     Meetings.upsert_meeting(args["iteration"],
                             INPUT_FILES["pairs"]["file"].format(iteration=args["iteration"]),
                             INPUT_FILES["pairs"]["sheet"])
+
+    APP_LOGGER.info("Writing interested and paired parties into file")
+    Meetings.get_paired_interested_parties(args["iteration"])
+
+    APP_LOGGER.info("Writing interested and unpaired parties into file")
+    Meetings.get_unpaired_interested_parties(args["iteration"])

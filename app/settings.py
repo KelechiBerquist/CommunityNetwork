@@ -1,9 +1,11 @@
 import logging
 import os
+from datetime import datetime
 
 APPLICATION_NAME = "CommunityNetwork"
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-LOG_FILENAME = os.path.join(ROOT_DIR, "log", "app.log")
+RUN_DATETIME = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+LOG_FILENAME = os.path.join(ROOT_DIR, "log", f"{RUN_DATETIME}_app.log")
 
 # Create logger
 APP_LOGGER = logging.getLogger(APPLICATION_NAME)
@@ -36,12 +38,14 @@ UPPER_PAIR_PERCENT = 0.9
 LOWER_PAIR_PERCENT = 0.8
 EXPLORATION_DEPTH = 2
 OUTPUT_FILES = {
-    "enriched_matched": os.path.join(ROOT_DIR, "data", "output", "{iteration}",
-                                     "enriched_matched_{iteration}.json"),
-    "matched": os.path.join(ROOT_DIR, "data", "output", "{iteration}",
-                            "matched_{iteration}.json"),
-    "unmatched": os.path.join(ROOT_DIR, "data", "output", "{iteration}",
-                              "unmatched_{iteration}.json")
+    "algo_matched": os.path.join(ROOT_DIR, "data", "output", "{iteration}",
+                                 "algo_matched_{iteration}.json"),
+    "algo_unmatched": os.path.join(ROOT_DIR, "data", "output", "{iteration}",
+                                   "algo_unmatched_{iteration}.json"),
+    "paired": os.path.join(ROOT_DIR, "data", "output", "{iteration}", "paired_{iteration}.json"),
+    "unpaired": os.path.join(ROOT_DIR, "data", "output", "{iteration}", "unpaired_{iteration}.json")
+    
+    
 }
 INPUT_FILES = {
     "roster": {
@@ -75,6 +79,13 @@ JOB_FAMILY_LEVELS = {"6-Associates": 1, "4-Sr. Associates": 2, "3-Managers": 3,
 COLUMN_MAPPING = {"NAME": "emp_name", "PREF NAME": "emp_pref_name", "EMAIL ADDRESS": "emp_email"}
 
 ROSTER_DATE_COLUMNS = ["HIRE DATE", "REHIRE DATE", "ADJ SERV DATE"]
+
+RELEVANT_ROSTER_COLUMNS = ["NAME", "PREF NAME", "EMAIL ADDRESS", "JOB FAMILY", "BU REGION",
+                           "PM BU SUBREGION DESCR", "BU AREA", "Business Area Descr",
+                           "BU OFFICE DESCR", "GEO AREA DESCR", "LOCATION DESCR",
+                           "MRS Category 1", "PML NAME", "PML EMAIL", "SPML Name",
+                           "HIGHEST EDUC LVL DESCR"]
+
 
 EMAIL_TEMPLATE = "Hello {senior} and {junior}," \
                  "\nI hope you are doing well and had a restful Super Bowl weekend." \
